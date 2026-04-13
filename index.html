@@ -1,0 +1,1230 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🌟 日程小助手</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .header {
+      text-align: center;
+      color: white;
+      margin-bottom: 30px;
+    }
+
+    .header h1 {
+      font-size: 2rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .header .date {
+      font-size: 1rem;
+      opacity: 0.9;
+    }
+
+    .nav-tabs {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .nav-tab {
+      padding: 12px 30px;
+      border: none;
+      border-radius: 25px;
+      background: rgba(255,255,255,0.2);
+      color: white;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .nav-tab:hover {
+      background: rgba(255,255,255,0.3);
+    }
+
+    .nav-tab.active {
+      background: white;
+      color: #667eea;
+      font-weight: 600;
+    }
+
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    }
+
+    .card-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #f0f0f0;
+    }
+
+    .section {
+      margin-bottom: 24px;
+    }
+
+    .section-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #555;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-title::before {
+      content: '';
+      width: 4px;
+      height: 16px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      border-radius: 2px;
+    }
+
+    .task-list {
+      list-style: none;
+    }
+
+    .task-item {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      background: #f8f9fa;
+      border-radius: 10px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      user-select: none;
+    }
+
+    .task-item:hover {
+      background: #f0f0f0;
+      transform: translateX(4px);
+    }
+
+    .task-item.completed {
+      background: #e8f5e9;
+      text-decoration: line-through;
+      color: #888;
+    }
+
+    .task-item.dragging {
+      opacity: 0.5;
+      transform: scale(1.02);
+    }
+
+    .checkbox {
+      width: 22px;
+      height: 22px;
+      border: 2px solid #ddd;
+      border-radius: 6px;
+      margin-right: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: all 0.2s ease;
+    }
+
+    .task-item.completed .checkbox {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      border-color: #667eea;
+    }
+
+    .checkbox svg {
+      width: 14px;
+      height: 14px;
+      stroke: white;
+      stroke-width: 3;
+      opacity: 0;
+    }
+
+    .task-item.completed .checkbox svg {
+      opacity: 1;
+    }
+
+    .task-text {
+      flex: 1;
+      font-size: 0.95rem;
+    }
+
+    .add-task {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .add-task input {
+      flex: 1;
+      padding: 12px 16px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      transition: border-color 0.2s ease;
+    }
+
+    .add-task input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .add-task button {
+      padding: 12px 20px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 0.95rem;
+      transition: transform 0.2s ease;
+    }
+
+    .add-task button:hover {
+      transform: scale(1.05);
+    }
+
+    .delete-btn {
+      padding: 4px 8px;
+      background: #ff5252;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .task-item:hover .delete-btn {
+      opacity: 1;
+    }
+
+    .progress-bar {
+      background: #e0e0e0;
+      height: 8px;
+      border-radius: 4px;
+      margin-top: 20px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+
+    .progress-text {
+      text-align: center;
+      margin-top: 10px;
+      font-size: 0.9rem;
+      color: #666;
+    }
+
+    .review-section {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 2px solid #f0f0f0;
+    }
+
+    .review-section textarea {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e0e0f0;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      resize: vertical;
+      min-height: 80px;
+      font-family: inherit;
+    }
+
+    .review-section textarea:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .review-section button {
+      margin-top: 10px;
+      padding: 10px 20px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    /* 日历视图 */
+    .calendar-view {
+      display: none;
+    }
+
+    .calendar-view.active {
+      display: block;
+    }
+
+    .daily-view {
+      display: block;
+    }
+
+    .daily-view.hidden {
+      display: none;
+    }
+
+    .calendar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .calendar-header h2 {
+      font-size: 1.5rem;
+      color: #333;
+    }
+
+    .calendar-nav {
+      display: flex;
+      gap: 10px;
+    }
+
+    .calendar-nav button {
+      padding: 8px 16px;
+      background: #f0f0f0;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+
+    .calendar-nav button:hover {
+      background: #e0e0e0;
+    }
+
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 6px;
+      width: 100%;
+      max-width: 100%;
+    }
+
+    .calendar-weekday {
+      text-align: center;
+      padding: 10px;
+      font-weight: 600;
+      color: #666;
+      font-size: 0.85rem;
+    }
+
+    .calendar-day {
+      min-height: 100px;
+      background: #f8f9fa;
+      border-radius: 10px;
+      padding: 8px;
+      transition: all 0.2s ease;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .calendar-day.today {
+      background: #e8f0fe;
+      border: 2px solid #667eea;
+    }
+
+    .calendar-day.other-month {
+      opacity: 0.3;
+      background: #f5f5f5;
+    }
+
+    .calendar-day.drag-over {
+      background: #e8f0fe;
+      border: 2px dashed #667eea;
+    }
+
+    .day-number {
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: #333;
+      margin-bottom: 4px;
+      flex-shrink: 0;
+    }
+
+    .day-tasks {
+      font-size: 0.7rem;
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      max-height: 70px;
+    }
+
+    .day-tasks::-webkit-scrollbar {
+      width: 3px;
+    }
+
+    .day-tasks::-webkit-scrollbar-thumb {
+      background: #ddd;
+      border-radius: 3px;
+    }
+
+    .day-task {
+      display: flex;
+      align-items: center;
+      padding: 4px 6px;
+      background: white;
+      border-radius: 4px;
+      margin-bottom: 4px;
+      cursor: grab;
+      transition: all 0.2s ease;
+    }
+
+    .day-task:active {
+      cursor: grabbing;
+    }
+
+    .day-task.dragging {
+      opacity: 0.5;
+    }
+
+    .day-task .mini-checkbox {
+      width: 14px;
+      height: 14px;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      margin-right: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .day-task.completed .mini-checkbox {
+      background: #667eea;
+      border-color: #667eea;
+    }
+
+    .day-task.completed .mini-checkbox::after {
+      content: '✓';
+      color: white;
+      font-size: 10px;
+    }
+
+    .day-task.completed .task-name {
+      text-decoration: line-through;
+      color: #999;
+    }
+
+    .task-name {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .day-task-collapsed {
+      display: flex;
+      align-items: center;
+      padding: 4px 6px;
+      background: #e8f0fe;
+      border-radius: 4px;
+      margin-bottom: 4px;
+      cursor: pointer;
+      font-size: 0.7rem;
+      color: #667eea;
+    }
+
+    .collapsed-label {
+      font-weight: 500;
+    }
+
+    .growth-tasks-expanded {
+      margin-bottom: 4px;
+    }
+
+    .quote {
+      text-align: center;
+      padding: 20px;
+      background: linear-gradient(135deg, rgba(102,126,234,0.1), rgba(118,75,162,0.1));
+      border-radius: 12px;
+      margin-top: 20px;
+      font-style: italic;
+      color: #555;
+    }
+
+    /* 响应式 */
+    @media (max-width: 768px) {
+      body {
+        padding: 10px;
+      }
+
+      .header h1 {
+        font-size: 1.5rem;
+      }
+
+      .calendar-grid {
+        gap: 4px;
+      }
+
+      .calendar-day {
+        min-height: 80px;
+        padding: 4px;
+      }
+
+      .day-task {
+        font-size: 0.7rem;
+        padding: 2px 4px;
+      }
+
+      .nav-tab {
+        padding: 10px 20px;
+        font-size: 0.9rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🌟 日程小助手</h1>
+      <div class="date" id="currentDate"></div>
+    </div>
+
+    <div class="nav-tabs">
+      <button class="nav-tab active" onclick="showView('daily')">今日日程</button>
+      <button class="nav-tab" onclick="showView('calendar')">月度日历</button>
+    </div>
+
+    <!-- 今日日程视图 -->
+    <div class="daily-view" id="dailyView">
+      <div class="card">
+        <div class="card-title" id="todayTitle">2026年4月13日 今日To Do List</div>
+
+        <!-- 昨日复盘 -->
+        <div class="section" id="yesterdayReview" style="display:none;">
+          <div class="section-title">昨日复盘</div>
+          <div id="reviewContent"></div>
+        </div>
+
+        <!-- 成长 -->
+        <div class="section">
+          <div class="section-title">成长</div>
+          <ul class="task-list" id="growthTasks"></ul>
+        </div>
+
+        <!-- 工作 -->
+        <div class="section">
+          <div class="section-title">工作</div>
+          <ul class="task-list" id="workTasks"></ul>
+          <div class="add-task">
+            <input type="text" id="newWorkTask" placeholder="添加新任务...">
+            <button onclick="addTask('work')">添加</button>
+          </div>
+        </div>
+
+        <!-- 生活 -->
+        <div class="section">
+          <div class="section-title">生活</div>
+          <ul class="task-list" id="lifeTasks"></ul>
+          <div class="add-task">
+            <input type="text" id="newLifeTask" placeholder="添加新任务...">
+            <button onclick="addTask('life')">添加</button>
+          </div>
+        </div>
+
+        <!-- 进度 -->
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+        </div>
+        <div class="progress-text" id="progressText">今日完成进度：0/5（0%）</div>
+
+        <!-- 今日复盘 -->
+        <div class="review-section">
+          <div class="section-title">今日复盘</div>
+          <textarea id="todayReview" placeholder="写下今天的感悟与收获..."></textarea>
+          <button onclick="saveReview()">保存复盘</button>
+        </div>
+
+        <div class="quote" id="quote"></div>
+      </div>
+    </div>
+
+    <!-- 月度日历视图 -->
+    <div class="calendar-view" id="calendarView">
+      <div class="card">
+        <div class="calendar-header">
+          <button class="calendar-nav" onclick="changeMonth(-1)">◀ 上月</button>
+          <h2 id="calendarTitle">2026年4月</h2>
+          <button class="calendar-nav" onclick="changeMonth(1)">下月 ▶</button>
+        </div>
+        <div class="calendar-grid" id="calendarGrid"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/cos-js-sdk-v5@1.10.1/dist/cos-js-sdk-v5.js"></script>
+  <script>
+    // 腾讯云COS配置
+    const COS_CONFIG = {
+      SecretId: 'AKIDP2TvMj06z32vfTKDDAwX9jAQULzSvESW',
+      SecretKey: 'yyuiQCtTzLV1NZYM3bzDLH0WIsFPL5e1',
+      Bucket: 'xiarenbucket-1421632456',
+      Region: 'ap-beijing'
+    };
+
+    let cos = null;
+    let cloudSyncEnabled = true; // 云同步开关
+    let cloudDataKey = 'schedule_cloud.json'; // 云端数据文件名
+
+    // 初始化COS SDK（如果已加载）
+    function initCOS() {
+      if (typeof COS !== 'undefined') {
+        cos = new COS({
+          SecretId: COS_CONFIG.SecretId,
+          SecretKey: COS_CONFIG.SecretKey
+        });
+      }
+    }
+
+    // 从云端加载数据
+    function loadFromCloud() {
+      if (!cos || !cloudSyncEnabled) return Promise.resolve(null);
+      
+      return new Promise((resolve) => {
+        cos.getObject({
+          Bucket: COS_CONFIG.Bucket,
+          Region: COS_CONFIG.Region,
+          Key: cloudDataKey
+        }, (err, data) => {
+          if (err) {
+            resolve(null);
+          } else {
+            try {
+              const content = typeof data.Body === 'string' 
+                ? data.Body 
+                : new TextDecoder().decode(data.Body);
+              const cloudData = JSON.parse(content);
+              resolve(cloudData);
+            } catch (e) {
+              resolve(null);
+            }
+          }
+        });
+      });
+    }
+
+    // 保存数据到云端
+    function saveToCloud(data) {
+      if (!cos || !cloudSyncEnabled) return Promise.resolve(false);
+      
+      return new Promise((resolve) => {
+        cos.putObject({
+          Bucket: COS_CONFIG.Bucket,
+          Region: COS_CONFIG.Region,
+          Key: cloudDataKey,
+          Body: JSON.stringify(data),
+          ContentType: 'application/json'
+        }, (err, data) => {
+          resolve(!err);
+        });
+      });
+    }
+
+    // 数据存储
+    let scheduleData = {};
+    let currentYear = 2026;
+    let currentMonth = 4;
+    const DATA_VERSION = 5; // 数据版本号，用于迁移旧数据
+
+    // 名人名言
+    const quotes = [
+      "今天是新的一天，不要重复昨天的错误，要创造新的奇迹。--村上春树",
+      "每一个不曾起舞的日子，都是对生命的辜负。--尼采",
+      "生活不是等待暴风雨过去，而是学会在雨中翩翩起舞。",
+      "你所浪费的今天，是昨天死去的人奢望的明天。",
+      "成功的秘诀就是每天比别人多努力一点。",
+      "行动是治愈恐惧的良药，而犹豫拖延将不断滋养恐惧。",
+      "星光不问赶路人，时光不负有心人。"
+    ];
+
+    // 初始化
+    async function init() {
+      initCOS();
+      await loadData();
+      updateCurrentDate();
+      renderDailyView();
+      renderCalendar();
+      setRandomQuote();
+    }
+
+    // 加载数据（本地优先，云端作为备份）
+    async function loadData() {
+      // 先检查本地
+      const stored = localStorage.getItem('scheduleData');
+      let localData = null;
+
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (parsed.version && parsed.version >= DATA_VERSION - 1) {
+            localData = parsed;
+          }
+        } catch (e) {
+          console.log('解析本地数据失败');
+        }
+      }
+
+      // 再检查云端
+      const cloudData = await loadFromCloud();
+
+      // 优先使用本地数据（用户最新操作都在本地）
+      // 如果本地没有或版本过旧，才使用云端数据
+      if (localData && localData.daily && Object.keys(localData.daily).length > 0) {
+        scheduleData = localData;
+        console.log('使用本地数据，共', Object.keys(localData.daily).length, '天数据');
+        // 同步到云端备份
+        if (cloudData && JSON.stringify(localData) !== JSON.stringify(cloudData)) {
+          console.log('本地数据更新，同步到云端...');
+          saveToCloud(scheduleData);
+        }
+      } else if (cloudData && cloudData.version) {
+        scheduleData = cloudData;
+        localStorage.setItem('scheduleData', JSON.stringify(scheduleData));
+        console.log('使用云端数据');
+      } else {
+        // 都没有，初始化新数据
+        initDefaultData();
+      }
+    }
+
+    // 初始化默认数据
+    function initDefaultData() {
+      // 今天的日期
+      const today = new Date();
+      const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      const dayNames = ['日', '一', '二', '三', '四', '五', '六'];
+      const dayOfWeek = dayNames[today.getDay()];
+
+      scheduleData = {
+        version: DATA_VERSION,
+        fixed: {
+          daily: [
+            { id: 'reading', task: '读书1小时' },
+            { id: 'exercise', task: '上肢与踝泵运动各2套' }
+          ],
+          workday: [
+            { id: 'ai-learning', task: '学习AI使用 ≥30分钟' },
+            { id: 'english', task: '英语学习 ≥30分钟' },
+            { id: 'podcast', task: 'Lenny播客学一集' }
+          ]
+        },
+        daily: {
+          [todayKey]: {
+            growth: [
+              { id: 'reading', task: '读书1小时', completed: false },
+              { id: 'exercise', task: '上肢与踝泵运动各2套', completed: false },
+              { id: 'ai-learning', task: '学习AI使用 ≥30分钟', completed: false },
+              { id: 'english', task: '英语学习 ≥30分钟', completed: false },
+              { id: 'podcast', task: 'Lenny播客学一集', completed: false }
+            ],
+            work: [],
+            life: [],
+            review: ''
+          }
+        },
+        holidays: [
+          '2026-01-01', '2026-01-02', '2026-01-03',
+          '2026-02-07', '2026-02-08', '2026-02-09', '2026-02-10', '2026-02-11', '2026-02-12', '2026-02-13',
+          '2026-04-04', '2026-04-05', '2026-04-06',
+          '2026-05-01', '2026-05-02', '2026-05-03', '2026-05-04', '2026-05-05',
+          '2026-05-31', '2026-06-01', '2026-06-02',
+          '2026-10-01', '2026-10-02', '2026-10-03', '2026-10-04', '2026-10-05', '2026-10-06', '2026-10-07', '2026-10-08',
+        ]
+      };
+      saveData();
+    }
+
+    // 保存数据（同时保存到本地和云端）
+    function saveData() {
+      localStorage.setItem('scheduleData', JSON.stringify(scheduleData));
+      // 异步保存到云端，不阻塞主操作
+      saveToCloud(scheduleData);
+    }
+
+    // 获取今日日期字符串
+    function getTodayKey() {
+      const today = new Date();
+      return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    }
+
+    // 判断是否是工作日（排除周末和节假日）
+    function isWorkday(dateKey) {
+      const date = new Date(dateKey);
+      const dayOfWeek = date.getDay();
+
+      // 周末不是工作日
+      if (dayOfWeek === 0 || dayOfWeek === 6) return false;
+
+      // 节假日不是工作日
+      if (scheduleData.holidays && scheduleData.holidays.includes(dateKey)) return false;
+
+      return true;
+    }
+
+    // 获取某日数据（根据工作日/节假日动态生成成长任务）
+    function getDayData(dateKey) {
+      if (!scheduleData.daily[dateKey]) {
+        scheduleData.daily[dateKey] = {
+          growth: [],
+          work: [],
+          life: [],
+          review: ''
+        };
+      }
+
+      // 每天都有的任务
+      const dailyTasks = scheduleData.fixed.daily.map(task => ({
+        ...task,
+        completed: false
+      }));
+
+      // 仅工作日的任务
+      const workdayTasks = isWorkday(dateKey)
+        ? scheduleData.fixed.workday.map(task => ({ ...task, completed: false }))
+        : [];
+
+      // 合并成长任务，保留已有完成状态
+      const allGrowthTasks = [...dailyTasks, ...workdayTasks];
+      const existingGrowth = scheduleData.daily[dateKey].growth || [];
+
+      scheduleData.daily[dateKey].growth = allGrowthTasks.map(task => {
+        const existing = existingGrowth.find(e => e.id === task.id);
+        if (existing) {
+          return { ...task, completed: existing.completed };
+        }
+        return task;
+      });
+
+      saveData();
+      return scheduleData.daily[dateKey];
+    }
+
+    // 获取今日数据
+    function getTodayData() {
+      return getDayData(getTodayKey());
+    }
+
+    // 更新当前日期显示
+    function updateCurrentDate() {
+      const today = new Date();
+      const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
+      document.getElementById('currentDate').textContent = today.toLocaleDateString('zh-CN', options);
+
+      const titleDate = `${today.getFullYear()}年${today.getMonth() + 1}月${today.getDate()}日`;
+      document.getElementById('todayTitle').textContent = titleDate + ' 今日To Do List';
+    }
+
+    // 渲染今日视图
+    function renderDailyView() {
+      const data = getTodayData();
+
+      // 成长任务
+      renderTaskList('growthTasks', data.growth, 'growth');
+
+      // 工作任务
+      renderTaskList('workTasks', data.work, 'work');
+
+      // 生活任务
+      renderTaskList('lifeTasks', data.life, 'life');
+
+      // 今日复盘
+      document.getElementById('todayReview').value = data.review || '';
+
+      // 更新进度
+      updateProgress();
+    }
+
+    // 渲染任务列表
+    function renderTaskList(elementId, tasks, category) {
+      const container = document.getElementById(elementId);
+      container.innerHTML = '';
+
+      tasks.forEach((task, index) => {
+        const li = document.createElement('li');
+        li.className = 'task-item' + (task.completed ? ' completed' : '');
+        li.draggable = true;
+        li.dataset.category = category;
+        li.dataset.index = index;
+        li.innerHTML = `
+          <div class="checkbox">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          </div>
+          <span class="task-text">${task.task}</span>
+          ${category !== 'growth' ? '<button class="delete-btn" onclick="deleteTask(event, \'' + category + '\', ' + index + ')">删除</button>' : ''}
+        `;
+
+        li.addEventListener('click', (e) => {
+          if (!e.target.classList.contains('delete-btn')) {
+            toggleTask(category, index);
+          }
+        });
+
+        // 拖拽事件
+        li.addEventListener('dragstart', handleDragStart);
+        li.addEventListener('dragend', handleDragEnd);
+
+        container.appendChild(li);
+      });
+    }
+
+    // 切换任务状态
+    function toggleTask(category, index) {
+      const data = getTodayData();
+      data[category][index].completed = !data[category][index].completed;
+      saveData();
+      renderDailyView();
+    }
+
+    // 添加任务
+    function addTask(category) {
+      const inputId = category === 'work' ? 'newWorkTask' : 'newLifeTask';
+      const input = document.getElementById(inputId);
+      const taskText = input.value.trim();
+
+      if (taskText) {
+        const data = getTodayData();
+        data[category].push({
+          id: Date.now(),
+          task: taskText,
+          completed: false
+        });
+        saveData();
+        input.value = '';
+        renderDailyView();
+      }
+    }
+
+    // 删除任务
+    function deleteTask(event, category, index) {
+      event.stopPropagation();
+      const data = getTodayData();
+      data[category].splice(index, 1);
+      saveData();
+      renderDailyView();
+    }
+
+    // 更新进度
+    function updateProgress() {
+      const data = getTodayData();
+      let total = data.growth.length + data.work.length + data.life.length;
+      let completed = 0;
+
+      data.growth.forEach(t => { if (t.completed) completed++; });
+      data.work.forEach(t => { if (t.completed) completed++; });
+      data.life.forEach(t => { if (t.completed) completed++; });
+
+      const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+      document.getElementById('progressFill').style.width = percent + '%';
+      document.getElementById('progressText').textContent = `今日完成进度：${completed}/${total}（${percent}%）`;
+    }
+
+    // 保存复盘
+    function saveReview() {
+      const data = getTodayData();
+      data.review = document.getElementById('todayReview').value;
+      saveData();
+      alert('复盘已保存！');
+    }
+
+    // 设置随机名言
+    function setRandomQuote() {
+      const quote = quotes[Math.floor(Math.random() * quotes.length)];
+      document.getElementById('quote').textContent = quote;
+    }
+
+    // 切换视图
+    function showView(view) {
+      document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
+      event.target.classList.add('active');
+
+      if (view === 'daily') {
+        document.getElementById('dailyView').classList.remove('hidden');
+        document.getElementById('calendarView').classList.remove('active');
+      } else {
+        document.getElementById('dailyView').classList.add('hidden');
+        document.getElementById('calendarView').classList.add('active');
+        renderCalendar();
+      }
+    }
+
+    // 渲染日历
+    function renderCalendar() {
+      const grid = document.getElementById('calendarGrid');
+      grid.innerHTML = '';
+
+      // 星期标题（周一到周日）
+      const weekdays = ['一', '二', '三', '四', '五', '六', '日'];
+      weekdays.forEach(day => {
+        const div = document.createElement('div');
+        div.className = 'calendar-weekday';
+        div.textContent = '周' + day;
+        grid.appendChild(div);
+      });
+
+      // 月份标题
+      document.getElementById('calendarTitle').textContent = `${currentYear}年${currentMonth}月`;
+
+      // 获取当月第一天和最后一天
+      const firstDay = new Date(currentYear, currentMonth - 1, 1);
+      const lastDay = new Date(currentYear, currentMonth, 0);
+
+      // 获取当月第一天是周几（0=周日，转为周一为起始）
+      let startDayOfWeek = firstDay.getDay();
+      // 将周日(0)转为6，其他减1，使周一=0
+      startDayOfWeek = startDayOfWeek === 0 ? 6 : startDayOfWeek - 1;
+
+      // 上月填充
+      const prevMonth = new Date(currentYear, currentMonth - 1, 0);
+      for (let i = startDayOfWeek - 1; i >= 0; i--) {
+        const dayDiv = createDayDiv(prevMonth.getDate() - i, true);
+        grid.appendChild(dayDiv);
+      }
+
+      // 当月日期
+      const today = new Date();
+      for (let day = 1; day <= lastDay.getDate(); day++) {
+        const dateKey = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const isToday = today.getFullYear() === currentYear &&
+                       today.getMonth() + 1 === currentMonth &&
+                       today.getDate() === day;
+        const dayDiv = createDayDiv(day, false, dateKey, isToday);
+        grid.appendChild(dayDiv);
+      }
+
+      // 下月填充（只填充到完整的周，不超出6行）
+      const totalCells = startDayOfWeek + lastDay.getDate();
+      const remainingCells = totalCells <= 35 ? 35 - totalCells : 42 - totalCells;
+      for (let i = 1; i <= remainingCells; i++) {
+        const dayDiv = createDayDiv(i, true);
+        grid.appendChild(dayDiv);
+      }
+    }
+
+    // 创建日期格子
+    function createDayDiv(day, isOtherMonth, dateKey = null, isToday = false) {
+      const div = document.createElement('div');
+      div.className = 'calendar-day';
+      if (isOtherMonth) div.classList.add('other-month');
+      if (isToday) div.classList.add('today');
+
+      const dayNumber = document.createElement('div');
+      dayNumber.className = 'day-number';
+      dayNumber.textContent = day;
+      div.appendChild(dayNumber);
+
+      if (dateKey) {
+        const today = getTodayKey();
+        // 只显示今天及之后的任务，之前的格子留空
+        const shouldShowTasks = dateKey >= today;
+
+        if (shouldShowTasks) {
+          // 确保每天的固定成长任务都存在
+          const dayData = getDayData(dateKey);
+
+          const dayTasks = document.createElement('div');
+          dayTasks.className = 'day-tasks';
+
+          // 先显示工作和生活任务，再显示成长任务（折叠）
+          const categories = ['work', 'life', 'growth'];
+
+          categories.forEach(category => {
+            const tasks = dayData[category];
+            if (tasks.length === 0) return;
+
+            if (category === 'growth') {
+              // 成长任务折叠显示
+            const completedCount = tasks.filter(t => t.completed).length;
+            const collapsedDiv = document.createElement('div');
+            collapsedDiv.className = 'day-task-collapsed';
+            collapsedDiv.innerHTML = `<span class="collapsed-label">📚 成长 ${completedCount}/${tasks.length}</span>`;
+            collapsedDiv.title = tasks.map(t => (t.completed ? '✅ ' : '⬜ ') + t.task).join('\n');
+
+            // 点击展开
+            collapsedDiv.addEventListener('click', (e) => {
+              e.stopPropagation();
+              const expanded = collapsedDiv.nextElementSibling;
+              if (expanded && expanded.classList.contains('growth-tasks-expanded')) {
+                expanded.style.display = expanded.style.display === 'none' ? 'block' : 'none';
+              }
+            });
+
+            dayTasks.appendChild(collapsedDiv);
+
+            // 展开的成长任务列表（默认隐藏）
+            const expandedDiv = document.createElement('div');
+            expandedDiv.className = 'growth-tasks-expanded';
+            expandedDiv.style.display = 'none';
+
+            tasks.forEach((task, idx) => {
+              const taskDiv = document.createElement('div');
+              taskDiv.className = 'day-task' + (task.completed ? ' completed' : '');
+              taskDiv.innerHTML = `
+                <div class="mini-checkbox"></div>
+                <span class="task-name">${task.task}</span>
+              `;
+
+              taskDiv.addEventListener('click', () => {
+                scheduleData.daily[dateKey][category][idx].completed = !scheduleData.daily[dateKey][category][idx].completed;
+                saveData();
+                renderCalendar();
+                if (dateKey === getTodayKey()) {
+                  renderDailyView();
+                }
+              });
+
+              expandedDiv.appendChild(taskDiv);
+            });
+
+            dayTasks.appendChild(expandedDiv);
+          } else {
+            // 工作和生活任务直接显示
+            tasks.forEach((task, idx) => {
+              const taskDiv = document.createElement('div');
+              taskDiv.className = 'day-task' + (task.completed ? ' completed' : '');
+              taskDiv.draggable = true;
+              taskDiv.dataset.dateKey = dateKey;
+              taskDiv.dataset.category = category;
+              taskDiv.dataset.index = idx;
+              taskDiv.innerHTML = `
+                <div class="mini-checkbox"></div>
+                <span class="task-name">${task.task}</span>
+              `;
+
+              taskDiv.addEventListener('click', () => {
+                scheduleData.daily[dateKey][category][idx].completed = !scheduleData.daily[dateKey][category][idx].completed;
+                saveData();
+                renderCalendar();
+                if (dateKey === getTodayKey()) {
+                  renderDailyView();
+                }
+              });
+
+              taskDiv.addEventListener('dragstart', handleDragStart);
+              taskDiv.addEventListener('dragend', handleDragEnd);
+
+              dayTasks.appendChild(taskDiv);
+            });
+          }
+        });
+
+        div.appendChild(dayTasks);
+
+        // 拖放目标
+        div.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          div.classList.add('drag-over');
+        });
+
+        div.addEventListener('dragleave', () => {
+          div.classList.remove('drag-over');
+        });
+
+        div.addEventListener('drop', (e) => {
+          e.preventDefault();
+          div.classList.remove('drag-over');
+          handleDrop(dateKey);
+        });
+        }
+      }
+
+      return div;
+    }
+
+    // 拖拽处理
+    let dragData = null;
+
+    function handleDragStart(e) {
+      dragData = {
+        dateKey: e.target.dataset.dateKey,
+        category: e.target.dataset.category,
+        index: parseInt(e.target.dataset.index)
+      };
+      e.target.classList.add('dragging');
+    }
+
+    function handleDragEnd(e) {
+      e.target.classList.remove('dragging');
+    }
+
+    function handleDrop(targetDateKey) {
+      if (!dragData || dragData.dateKey === targetDateKey) return;
+
+      const sourceData = scheduleData.daily[dragData.dateKey];
+      if (!sourceData) return;
+
+      const task = sourceData[dragData.category][dragData.index];
+
+      // 确保目标日期有数据
+      if (!scheduleData.daily[targetDateKey]) {
+        scheduleData.daily[targetDateKey] = {
+          growth: [],
+          work: [],
+          life: [],
+          review: ''
+        };
+      }
+
+      // 移动任务到目标日期
+      scheduleData.daily[targetDateKey][dragData.category].push(task);
+      sourceData[dragData.category].splice(dragData.index, 1);
+
+      saveData();
+      renderCalendar();
+      dragData = null;
+    }
+
+    // 切换月份
+    function changeMonth(delta) {
+      currentMonth += delta;
+      if (currentMonth > 12) {
+        currentMonth = 1;
+        currentYear++;
+      } else if (currentMonth < 1) {
+        currentMonth = 12;
+        currentYear--;
+      }
+      renderCalendar();
+    }
+
+    // 初始化
+    init();
+  </script>
+</body>
+</html>
