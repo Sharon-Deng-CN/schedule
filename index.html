@@ -682,7 +682,7 @@
       setRandomQuote();
     }
 
-    // 加载数据（本地优先，云端作为备份）
+    // 加载数据（云端为主，时间戳比对）
     async function loadData() {
       // 先检查本地
       const stored = localStorage.getItem('scheduleData');
@@ -702,20 +702,36 @@
       // 再检查云端
       const cloudData = await loadFromCloud();
 
-      // 优先使用本地数据（用户最新操作都在本地）
-      // 如果本地没有或版本过旧，才使用云端数据
-      if (localData && localData.daily && Object.keys(localData.daily).length > 0) {
-        scheduleData = localData;
-        console.log('使用本地数据，共', Object.keys(localData.daily).length, '天数据');
-        // 同步到云端备份
-        if (cloudData && JSON.stringify(localData) !== JSON.stringify(cloudData)) {
-          console.log('本地数据更新，同步到云端...');
+      // 比较本地和云端数据，使用时间戳更新的那个
+      const localTime = localData?.lastModified || 0;
+      const cloudTime = cloudData?.lastModified || 0;
+
+      if (localData && cloudData && cloudData.version) {
+        // 两者都有数据，比较时间戳
+        if (cloudTime > localTime) {
+          // 云端更新，使用云端数据
+          scheduleData = cloudData;
+          localStorage.setItem('scheduleData', JSON.stringify(scheduleData));
+          console.log('云端数据更新，已同步到本地');
+        } else if (localTime > cloudTime) {
+          // 本地更新，使用本地数据并同步到云端
+          scheduleData = localData;
           saveToCloud(scheduleData);
+          console.log('本地数据更新，已同步到云端');
+        } else {
+          // 时间戳相同，使用本地数据
+          scheduleData = localData;
         }
       } else if (cloudData && cloudData.version) {
+        // 只有云端有数据
         scheduleData = cloudData;
         localStorage.setItem('scheduleData', JSON.stringify(scheduleData));
-        console.log('使用云端数据');
+        console.log('从云端加载数据');
+      } else if (localData && localData.daily && Object.keys(localData.daily).length > 0) {
+        // 只有本地有数据
+        scheduleData = localData;
+        saveToCloud(scheduleData);
+        console.log('本地数据已同步到云端');
       } else {
         // 都没有，初始化新数据
         initDefaultData();
@@ -732,6 +748,7 @@
 
       scheduleData = {
         version: DATA_VERSION,
+        lastModified: Date.now(),
         fixed: {
           daily: [
             { id: 'reading', task: '读书1小时' },
@@ -771,6 +788,8 @@
 
     // 保存数据（同时保存到本地和云端）
     function saveData() {
+      // 更新时间戳
+      scheduleData.lastModified = Date.now();
       localStorage.setItem('scheduleData', JSON.stringify(scheduleData));
       // 异步保存到云端，不阻塞主操作
       saveToCloud(scheduleData);
