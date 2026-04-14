@@ -440,6 +440,15 @@
       color: #999;
     }
 
+    .day-task.uncompleted-past .task-name {
+      color: #e74c3c;
+      font-weight: 500;
+    }
+
+    .day-task.uncompleted-past .mini-checkbox {
+      border-color: #e74c3c;
+    }
+
     .task-name {
       flex: 1;
       overflow: hidden;
@@ -677,9 +686,47 @@
       initCOS();
       await loadData();
       updateCurrentDate();
+      rollOverUncompletedTasks();
       renderDailyView();
       renderCalendar();
       setRandomQuote();
+    }
+
+    // 将昨天未完成的工作/生活任务滚入今天（避免重复同名任务）
+    function rollOverUncompletedTasks() {
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayKey = formatDate(yesterday);
+      const todayKey = getTodayKey();
+
+      const yesterdayData = scheduleData.daily[yesterdayKey];
+      if (!yesterdayData) return;
+
+      const todayData = getDayData(todayKey);
+
+      ['work', 'life'].forEach(category => {
+        const yesterdayTasks = yesterdayData[category] || [];
+        yesterdayTasks.forEach(task => {
+          if (task.completed) return; // 已完成的跳过
+          // 检查今天是否已有同名任务
+          const alreadyExists = todayData[category].some(t => t.task === task.task);
+          if (!alreadyExists) {
+            todayData[category].push({
+              id: Date.now() + Math.random(),
+              task: task.task,
+              completed: false
+            });
+          }
+        });
+      });
+
+      saveData();
+    }
+
+    // 格式化日期为 YYYY-MM-DD
+    function formatDate(date) {
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     }
 
     // 加载数据（云端为主，时间戳比对）
@@ -1071,117 +1118,150 @@
 
       if (dateKey) {
         const today = getTodayKey();
-        // 只显示今天及之后的任务，之前的格子留空
-        const shouldShowTasks = dateKey >= today;
+        const isPast = dateKey < today;
+        const isFuture = dateKey > today;
 
-        if (shouldShowTasks) {
-          // 确保每天的固定成长任务都存在
-          const dayData = getDayData(dateKey);
+        // 过去的日期：显示历史工作/生活任务（只读，不可编辑）
+        // 今天的日期：完整显示所有任务（可操作）
+        // 未来的日期：完整显示所有任务（可操作）
 
-          const dayTasks = document.createElement('div');
-          dayTasks.className = 'day-tasks';
+        // 确保每天的固定成长任务都存在
+        const dayData = getDayData(dateKey);
 
-          // 先显示工作和生活任务，再显示成长任务（折叠）
-          const categories = ['work', 'life', 'growth'];
+        const dayTasks = document.createElement('div');
+        dayTasks.className = 'day-tasks';
 
-          categories.forEach(category => {
-            const tasks = dayData[category];
-            if (tasks.length === 0) return;
+        if (isPast) {
+            // 过去的日期：只显示工作/生活任务（只读样式），成长任务折叠
+            const categories = ['work', 'life'];
+            categories.forEach(category => {
+              const tasks = dayData[category];
+              if (tasks.length === 0) return;
 
-            if (category === 'growth') {
-              // 成长任务折叠显示
-            const completedCount = tasks.filter(t => t.completed).length;
-            const collapsedDiv = document.createElement('div');
-            collapsedDiv.className = 'day-task-collapsed';
-            collapsedDiv.innerHTML = `<span class="collapsed-label">📚 成长 ${completedCount}/${tasks.length}</span>`;
-            collapsedDiv.title = tasks.map(t => (t.completed ? '✅ ' : '⬜ ') + t.task).join('\n');
+              tasks.forEach((task, idx) => {
+                const taskDiv = document.createElement('div');
+                taskDiv.className = 'day-task' + (task.completed ? ' completed' : '');
+                if (!task.completed) taskDiv.classList.add('uncompleted-past');
+                taskDiv.innerHTML = `
+                  <div class="mini-checkbox"></div>
+                  <span class="task-name">${task.task}</span>
+                `;
+                dayTasks.appendChild(taskDiv);
+              });
+            });
 
-            // 点击展开
-            collapsedDiv.addEventListener('click', (e) => {
-              e.stopPropagation();
-              const expanded = collapsedDiv.nextElementSibling;
-              if (expanded && expanded.classList.contains('growth-tasks-expanded')) {
-                expanded.style.display = expanded.style.display === 'none' ? 'block' : 'none';
+            // 成长任务折叠（过去日期只读）
+            const growthTasks = dayData.growth;
+            if (growthTasks.length > 0) {
+              const completedCount = growthTasks.filter(t => t.completed).length;
+              const collapsedDiv = document.createElement('div');
+              collapsedDiv.className = 'day-task-collapsed';
+              collapsedDiv.innerHTML = `<span class="collapsed-label">📚 成长 ${completedCount}/${growthTasks.length}</span>`;
+              collapsedDiv.title = growthTasks.map(t => (t.completed ? '✅ ' : '⬜ ') + t.task).join('\n');
+              dayTasks.appendChild(collapsedDiv);
+            }
+          } else {
+            // 今天及未来的日期：先显示工作和生活任务，再显示成长任务（折叠）
+            const categories = ['work', 'life', 'growth'];
+
+            categories.forEach(category => {
+              const tasks = dayData[category];
+              if (tasks.length === 0) return;
+
+              if (category === 'growth') {
+                // 成长任务折叠显示
+                const completedCount = tasks.filter(t => t.completed).length;
+                const collapsedDiv = document.createElement('div');
+                collapsedDiv.className = 'day-task-collapsed';
+                collapsedDiv.innerHTML = `<span class="collapsed-label">📚 成长 ${completedCount}/${tasks.length}</span>`;
+                collapsedDiv.title = tasks.map(t => (t.completed ? '✅ ' : '⬜ ') + t.task).join('\n');
+
+                // 点击展开
+                collapsedDiv.addEventListener('click', (e) => {
+                  e.stopPropagation();
+                  const expanded = collapsedDiv.nextElementSibling;
+                  if (expanded && expanded.classList.contains('growth-tasks-expanded')) {
+                    expanded.style.display = expanded.style.display === 'none' ? 'block' : 'none';
+                  }
+                });
+
+                dayTasks.appendChild(collapsedDiv);
+
+                // 展开的成长任务列表（默认隐藏）
+                const expandedDiv = document.createElement('div');
+                expandedDiv.className = 'growth-tasks-expanded';
+                expandedDiv.style.display = 'none';
+
+                tasks.forEach((task, idx) => {
+                  const taskDiv = document.createElement('div');
+                  taskDiv.className = 'day-task' + (task.completed ? ' completed' : '');
+                  taskDiv.innerHTML = `
+                    <div class="mini-checkbox"></div>
+                    <span class="task-name">${task.task}</span>
+                  `;
+
+                  taskDiv.addEventListener('click', () => {
+                    scheduleData.daily[dateKey][category][idx].completed = !scheduleData.daily[dateKey][category][idx].completed;
+                    saveData();
+                    renderCalendar();
+                    if (dateKey === getTodayKey()) {
+                      renderDailyView();
+                    }
+                  });
+
+                  expandedDiv.appendChild(taskDiv);
+                });
+
+                dayTasks.appendChild(expandedDiv);
+              } else {
+                // 工作和生活任务直接显示
+                tasks.forEach((task, idx) => {
+                  const taskDiv = document.createElement('div');
+                  taskDiv.className = 'day-task' + (task.completed ? ' completed' : '');
+                  taskDiv.draggable = true;
+                  taskDiv.dataset.dateKey = dateKey;
+                  taskDiv.dataset.category = category;
+                  taskDiv.dataset.index = idx;
+                  taskDiv.innerHTML = `
+                    <div class="mini-checkbox"></div>
+                    <span class="task-name">${task.task}</span>
+                  `;
+
+                  taskDiv.addEventListener('click', () => {
+                    scheduleData.daily[dateKey][category][idx].completed = !scheduleData.daily[dateKey][category][idx].completed;
+                    saveData();
+                    renderCalendar();
+                    if (dateKey === getTodayKey()) {
+                      renderDailyView();
+                    }
+                  });
+
+                  taskDiv.addEventListener('dragstart', handleDragStart);
+                  taskDiv.addEventListener('dragend', handleDragEnd);
+
+                  dayTasks.appendChild(taskDiv);
+                });
               }
             });
-
-            dayTasks.appendChild(collapsedDiv);
-
-            // 展开的成长任务列表（默认隐藏）
-            const expandedDiv = document.createElement('div');
-            expandedDiv.className = 'growth-tasks-expanded';
-            expandedDiv.style.display = 'none';
-
-            tasks.forEach((task, idx) => {
-              const taskDiv = document.createElement('div');
-              taskDiv.className = 'day-task' + (task.completed ? ' completed' : '');
-              taskDiv.innerHTML = `
-                <div class="mini-checkbox"></div>
-                <span class="task-name">${task.task}</span>
-              `;
-
-              taskDiv.addEventListener('click', () => {
-                scheduleData.daily[dateKey][category][idx].completed = !scheduleData.daily[dateKey][category][idx].completed;
-                saveData();
-                renderCalendar();
-                if (dateKey === getTodayKey()) {
-                  renderDailyView();
-                }
-              });
-
-              expandedDiv.appendChild(taskDiv);
-            });
-
-            dayTasks.appendChild(expandedDiv);
-          } else {
-            // 工作和生活任务直接显示
-            tasks.forEach((task, idx) => {
-              const taskDiv = document.createElement('div');
-              taskDiv.className = 'day-task' + (task.completed ? ' completed' : '');
-              taskDiv.draggable = true;
-              taskDiv.dataset.dateKey = dateKey;
-              taskDiv.dataset.category = category;
-              taskDiv.dataset.index = idx;
-              taskDiv.innerHTML = `
-                <div class="mini-checkbox"></div>
-                <span class="task-name">${task.task}</span>
-              `;
-
-              taskDiv.addEventListener('click', () => {
-                scheduleData.daily[dateKey][category][idx].completed = !scheduleData.daily[dateKey][category][idx].completed;
-                saveData();
-                renderCalendar();
-                if (dateKey === getTodayKey()) {
-                  renderDailyView();
-                }
-              });
-
-              taskDiv.addEventListener('dragstart', handleDragStart);
-              taskDiv.addEventListener('dragend', handleDragEnd);
-
-              dayTasks.appendChild(taskDiv);
-            });
           }
-        });
 
-        div.appendChild(dayTasks);
+          div.appendChild(dayTasks);
 
-        // 拖放目标
-        div.addEventListener('dragover', (e) => {
-          e.preventDefault();
-          div.classList.add('drag-over');
-        });
+          // 拖放目标
+          div.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            div.classList.add('drag-over');
+          });
 
-        div.addEventListener('dragleave', () => {
-          div.classList.remove('drag-over');
-        });
+          div.addEventListener('dragleave', () => {
+            div.classList.remove('drag-over');
+          });
 
-        div.addEventListener('drop', (e) => {
-          e.preventDefault();
-          div.classList.remove('drag-over');
-          handleDrop(dateKey);
-        });
-        }
+          div.addEventListener('drop', (e) => {
+            e.preventDefault();
+            div.classList.remove('drag-over');
+            handleDrop(dateKey);
+          });
       }
 
       return div;
